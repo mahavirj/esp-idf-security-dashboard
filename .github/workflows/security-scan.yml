@@ -1,0 +1,350 @@
+name: ESP-IDF Security Vulnerability Scan
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: 'Comma-separated list of versions to scan (optional)'
+        required: false
+        type: string
+      force_full_scan:
+        description: 'Force scan of all supported versions'
+        required: false
+        type: boolean
+        default: false
+      esp_idf_repository:
+        description: 'ESP-IDF repository URL'
+        required: false
+        type: string
+        default: 'https://github.com/espressif/esp-idf.git'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  issues: write
+
+concurrency:
+  group: "security-scan"
+  cancel-in-progress: false
+
+jobs:
+  security-scan:
+    name: Vulnerability Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        esp_idf_version: 
+          - "release-v5.0"
+          - "release-v5.1" 
+          - "release-v5.2"
+          - "release-v5.3"
+          - "release-v5.4"
+      fail-fast: false
+      max-parallel: 2
+    
+    steps:
+      - name: Checkout Security Dashboard Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Docker
+        run: |
+          echo "Setting up Docker for ESP-IDF image scanning..."
+          docker --version
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install esp-idf-sbom
+        run: |
+          pip install esp-idf-sbom
+          pip show esp-idf-sbom
+
+      - name: Create data directory
+        run: mkdir -p data
+
+      - name: Determine versions to scan
+        id: determine-versions
+        run: |
+          if [ "${{ github.event.inputs.versions }}" != "" ]; then
+            # Use manually specified versions
+            VERSIONS="${{ github.event.inputs.versions }}"
+          elif [ "${{ github.event.inputs.force_full_scan }}" == "true" ]; then
+            # Scan all versions for this major version
+            MAJOR_VERSION="${{ matrix.esp_idf_version }}"
+            case $MAJOR_VERSION in
+              "release-v5.0")
+                VERSIONS="v5.0.1,v5.0.2,v5.0.3,v5.0.4,v5.0.5,v5.0.6,v5.0.7,v5.0.8,v5.0.9"
+                ;;
+              "release-v5.1")
+                VERSIONS="v5.1.1,v5.1.2,v5.1.3,v5.1.4,v5.1.5,v5.1.6"
+                ;;
+              "release-v5.2")
+                VERSIONS="v5.2.1,v5.2.2,v5.2.3,v5.2.4,v5.2.5"
+                ;;
+              "release-v5.3")
+                VERSIONS="v5.3.1,v5.3.2,v5.3.3"
+                ;;
+              "release-v5.4")
+                VERSIONS="v5.4.1,v5.4.2"
+                ;;
+            esac
+          else
+            # Default: scan latest 2 versions for this major version
+            MAJOR_VERSION="${{ matrix.esp_idf_version }}"
+            case $MAJOR_VERSION in
+              "release-v5.0")
+                VERSIONS="v5.0.8,v5.0.9"
+                ;;
+              "release-v5.1")
+                VERSIONS="v5.1.5,v5.1.6"
+                ;;
+              "release-v5.2")
+                VERSIONS="v5.2.4,v5.2.5"
+                ;;
+              "release-v5.3")
+                VERSIONS="v5.3.2,v5.3.3"
+                ;;
+              "release-v5.4")
+                VERSIONS="v5.4.1,v5.4.2"
+                ;;
+            esac
+          fi
+          echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
+          echo "Will scan versions: $VERSIONS"
+
+      - name: Sync NVD Database
+        run: |
+          echo "Syncing NVD database..."
+          esp-idf-sbom sync-db
+
+      - name: Run Security Scan
+        run: |
+          echo "Starting security scan for versions: ${{ steps.determine-versions.outputs.versions }}"
+          python scan_releases.py \
+            --output-dir "./data" \
+            --versions "${{ steps.determine-versions.outputs.versions }}"
+
+      - name: Upload scan results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-results-${{ matrix.esp_idf_version }}
+          path: data/
+          retention-days: 7
+
+  aggregate-results:
+    name: Aggregate Results and Deploy
+    needs: security-scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all scan results
+        uses: actions/download-artifact@v4
+        with:
+          path: scan-artifacts/
+
+      - name: Aggregate scan results
+        run: |
+          mkdir -p data
+          
+          # Combine all scan results
+          for artifact_dir in scan-artifacts/scan-results-*/; do
+            if [ -d "$artifact_dir" ]; then
+              echo "Processing artifact: $artifact_dir"
+              cp -r "$artifact_dir"* data/ || true
+            fi
+          done
+          
+          # List all data files
+          echo "Aggregated data files:"
+          ls -la data/
+
+      - name: Generate final summary
+        run: |
+          cd data
+          
+          # Create a comprehensive scan summary
+          python3 << 'EOF'
+          import json
+          import glob
+          from datetime import datetime
+          
+          # Find all version JSON files
+          version_files = glob.glob("v*.json")
+          scanned_versions = []
+          
+          for file in version_files:
+              try:
+                  with open(file, 'r') as f:
+                      data = json.load(f)
+                      scanned_versions.append(data['release_version'])
+              except Exception as e:
+                  print(f"Error processing {file}: {e}")
+          
+          # Create summary
+          summary = {
+              "last_updated": datetime.utcnow().isoformat() + "Z",
+              "scanned_versions": sorted(scanned_versions, reverse=True),
+              "failed_versions": [],
+              "total_scanned": len(scanned_versions),
+              "scan_method": "github_actions",
+              "workflow_run": "${{ github.run_number }}",
+              "repository": "mahavirj/esp-idf-security-dashboard"
+          }
+          
+          with open("scan_summary.json", "w") as f:
+              json.dump(summary, f, indent=2)
+          
+          print(f"Generated summary for {len(scanned_versions)} versions")
+          EOF
+
+      - name: Setup Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v4
+
+      - name: Upload to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Check for High Severity Vulnerabilities
+        id: check-vulnerabilities
+        run: |
+          cd data
+          
+          # Check for high/critical severity vulnerabilities
+          python3 << 'EOF'
+          import json
+          import glob
+          import os
+          
+          high_severity_found = False
+          critical_vulns = []
+          high_vulns = []
+          
+          for file in glob.glob("v*.json"):
+              with open(file, 'r') as f:
+                  data = json.load(f)
+              
+              version = data.get('release_version', file.replace('.json', ''))
+              summary = data.get('summary', {}).get('by_severity', {})
+              
+              if summary.get('CRITICAL', 0) > 0:
+                  critical_vulns.append(f"{version}: {summary['CRITICAL']} critical")
+                  high_severity_found = True
+              
+              if summary.get('HIGH', 0) > 0:
+                  high_vulns.append(f"{version}: {summary['HIGH']} high")
+                  high_severity_found = True
+          
+          if high_severity_found:
+              print("High severity vulnerabilities found!")
+              print("Critical:", critical_vulns)
+              print("High:", high_vulns)
+              
+              # Create issue body
+              issue_body = f"""## 🚨 High Severity Vulnerabilities Detected
+          
+          The ESP-IDF security scan has detected high or critical severity vulnerabilities in ESP-IDF releases.
+          
+          ### Critical Vulnerabilities
+          {chr(10).join(f"- {v}" for v in critical_vulns) if critical_vulns else "None"}
+          
+          ### High Severity Vulnerabilities  
+          {chr(10).join(f"- {v}" for v in high_vulns) if high_vulns else "None"}
+          
+          ### Next Steps
+          1. Review the [Security Dashboard](https://mahavirj.github.io/esp-idf-security-dashboard) for detailed information
+          2. Evaluate which vulnerabilities affect components used in production
+          3. Consider updating to newer ESP-IDF releases or cherry-picking security fixes
+          4. Check if vulnerabilities affect your specific use case and configuration
+          
+          ### Resources
+          - **Dashboard**: https://mahavirj.github.io/esp-idf-security-dashboard
+          - **ESP-IDF Releases**: https://github.com/espressif/esp-idf/releases
+          - **ESP-IDF Security**: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/security/index.html
+          
+          **Scan Date:** {data.get('scan_date', 'Unknown')}
+          **Workflow Run:** ${{ github.run_number }}
+          **Repository:** mahavirj/esp-idf-security-dashboard
+          """
+              
+              with open('/tmp/issue_body.md', 'w') as f:
+                  f.write(issue_body)
+              
+              # Set environment variable to create issue
+              with open(os.environ['GITHUB_ENV'], 'a') as f:
+                  f.write('CREATE_SECURITY_ISSUE=true\n')
+          else:
+              print("No high severity vulnerabilities found.")
+          EOF
+
+      - name: Create or Update Security Issue
+        if: env.CREATE_SECURITY_ISSUE == 'true' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const issueBody = fs.readFileSync('/tmp/issue_body.md', 'utf8');
+            
+            // Check if there's already an open security issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'security,vulnerability-scan',
+              state: 'open'
+            });
+            
+            if (issues.data.length > 0) {
+              // Update existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: `## Updated Scan Results (${new Date().toISOString().split('T')[0]})\n\n${issueBody}`
+              });
+              console.log(`Updated existing issue #${issues.data[0].number}`);
+            } else {
+              // Create new issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 High Severity Vulnerabilities Detected - ${new Date().toISOString().split('T')[0]}`,
+                body: issueBody,
+                labels: ['security', 'vulnerability-scan', 'high-priority']
+              });
+              console.log(`Created new issue #${issue.data.number}`);
+            }
+
+      - name: Output Summary
+        run: |
+          echo "✅ ESP-IDF Security scan completed successfully"
+          echo "📊 Dashboard available at: https://mahavirj.github.io/esp-idf-security-dashboard"
+          echo "🔍 Workflow run: ${{ github.run_number }}"
+          echo "📅 Scan date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          
+          if [ -f "data/scan_summary.json" ]; then
+            echo ""
+            echo "📋 Scan Summary:"
+            cat data/scan_summary.json | jq '.'
+          fi
+          
+          echo ""
+          echo "🔗 Resources:"
+          echo "  - Dashboard: https://mahavirj.github.io/esp-idf-security-dashboard"
+          echo "  - Repository: https://github.com/mahavirj/esp-idf-security-dashboard"
+          echo "  - ESP-IDF: https://github.com/espressif/esp-idf"

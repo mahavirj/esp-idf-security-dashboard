@@ -650,7 +650,47 @@ class ESPIDFSecurityScanner:
         logger.info(f"Successfully scanned: {len(results)} items")
         return results
         
-    def scan_all_v5_releases(self, use_batch_mode=True):
+    def scan_unified_targets(self, targets, prefer_git_over_docker=False):
+        """Unified scanning: scan ALL targets (tags, branches) in a single clone operation"""
+        logger.info(f"Starting unified scan with single clone for {len(targets)} targets")
+        
+        if prefer_git_over_docker:
+            logger.info("Using git-only mode for all targets (skipping Docker)")
+            return self.scan_multiple_targets_with_single_clone(targets)
+        
+        # Separate Docker-available vs git-only targets
+        docker_targets = [t for t in targets if t in ESP_IDF_DOCKER_IMAGES]
+        git_targets = [t for t in targets if t not in ESP_IDF_DOCKER_IMAGES]
+        
+        logger.info(f"Found {len(docker_targets)} Docker-available targets and {len(git_targets)} git-only targets")
+        
+        # Option 1: Use Docker for available versions, git for others (current mixed approach)
+        # Option 2: Use git for everything (more consistent, single clone)
+        
+        if len(git_targets) > len(docker_targets) * 2:  # If many git targets, use git for everything
+            logger.info("Many git targets detected - using unified git scanning for ALL targets")
+            return self.scan_multiple_targets_with_single_clone(targets)
+        else:
+            logger.info("Using mixed approach: Docker for stable releases, git batch for others")
+            results = {}
+            
+            # Scan Docker targets individually (fast)
+            for target in docker_targets:
+                result = self.scan_version_with_docker(target)
+                if result:
+                    tool_version = self.get_tool_version()
+                    dashboard_data = self.parse_and_store_results(result, target, tool_version, "docker")
+                    results[target] = dashboard_data
+                    logger.info(f"✅ Docker scan completed for {target}")
+            
+            # Batch scan git targets (single clone)
+            if git_targets:
+                git_results = self.scan_multiple_targets_with_single_clone(git_targets)
+                results.update(git_results)
+            
+            return results
+    
+    def scan_all_v5_releases(self, use_unified_mode=True, prefer_git_over_docker=False):
         """Scan all available v5.x tags and release branches efficiently"""
         logger.info("Scanning all ESP-IDF v5.x releases and branches...")
         
@@ -663,10 +703,10 @@ class ESPIDFSecurityScanner:
         
         logger.info(f"Found {len(v5_tags)} v5.x tags and {len(release_branches)} v5.x release branches")
         
-        if use_batch_mode:
-            # Combine all git targets for batch scanning
+        if use_unified_mode:
+            # Combine all targets for unified scanning
             all_targets = v5_tags + release_branches
-            return self.scan_multiple_targets_with_single_clone(all_targets)
+            return self.scan_unified_targets(all_targets, prefer_git_over_docker)
         else:
             # Use traditional scanning approach
             return self.scan_releases(v5_tags, include_branches=release_branches)
@@ -689,6 +729,10 @@ def main():
                        help="Use optimized batch scanning (single clone for multiple targets)")
     parser.add_argument("--scan-all-v5", action="store_true",
                        help="Scan all available v5.x tags and release branches")
+    parser.add_argument("--unified-mode", action="store_true",
+                       help="Use unified scanning (single clone for all targets)")
+    parser.add_argument("--git-only", action="store_true",
+                       help="Use git for ALL targets, including those with Docker images")
     parser.add_argument("--list-remote-targets", action="store_true",
                        help="List all available remote tags and branches without scanning")
     parser.add_argument("--no-docker", action="store_true",
@@ -734,9 +778,10 @@ def main():
         if args.scan_all_v5:
             logger.info(f"ESP-IDF Security Scanner starting in scan-all-v5 mode...")
             logger.info(f"Output directory: {args.output_dir}")
-            logger.info(f"Batch mode: {args.batch_mode}")
+            logger.info(f"Unified mode: {args.unified_mode}")
+            logger.info(f"Git-only mode: {args.git_only}")
             
-            results = scanner.scan_all_v5_releases(use_batch_mode=args.batch_mode)
+            results = scanner.scan_all_v5_releases(use_unified_mode=args.unified_mode, prefer_git_over_docker=args.git_only)
         else:
             # Regular scanning mode
             if args.single_version:
@@ -754,15 +799,28 @@ def main():
             logger.info(f"Output directory: {args.output_dir}")
             logger.info(f"Using Docker: {not args.no_docker}")
             logger.info(f"Batch mode: {args.batch_mode}")
+            logger.info(f"Unified mode: {args.unified_mode}")
+            logger.info(f"Git-only mode: {args.git_only}")
             logger.info(f"Versions to scan: {len(versions)}")
             if args.include_release_branches:
                 logger.info(f"Release branches to scan: {len(ESP_IDF_RELEASE_BRANCHES)}")
             if branches:
                 logger.info(f"Custom branches to scan: {branches}")
             
-            results = scanner.scan_releases(versions, include_branches=branches, 
-                                          include_release_branches=args.include_release_branches,
-                                          use_batch_mode=args.batch_mode)
+            # Use unified mode if requested
+            if args.unified_mode:
+                all_targets = versions[:]
+                if args.include_release_branches:
+                    all_targets.extend(ESP_IDF_RELEASE_BRANCHES)
+                if branches:
+                    all_targets.extend(branches)
+                
+                logger.info(f"Using unified scanning for {len(all_targets)} total targets")
+                results = scanner.scan_unified_targets(all_targets, prefer_git_over_docker=args.git_only)
+            else:
+                results = scanner.scan_releases(versions, include_branches=branches, 
+                                              include_release_branches=args.include_release_branches,
+                                              use_batch_mode=args.batch_mode)
         
         if results:
             print(f"\n✅ Successfully scanned {len(results)} items")

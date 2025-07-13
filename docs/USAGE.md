@@ -61,7 +61,40 @@ python scan_releases.py --single-version v5.4.2 --output-dir ./data
 
 #### Include Latest Branch Code
 ```bash
-python scan_releases.py --versions v5.4.2 --include-branches master,release-v5.4 --output-dir ./data
+python scan_releases.py --versions v5.4.2 --include-branches master,develop --output-dir ./data
+```
+
+#### Scan ESP-IDF Release Branches
+```bash
+python scan_releases.py --include-release-branches --output-dir ./data
+```
+
+#### Scan Both Stable Releases and Release Branches
+```bash
+python scan_releases.py --versions v5.4.2,v5.3.3 --include-release-branches --output-dir ./data
+```
+
+#### Optimized Unified Scanning (Most Efficient)
+```bash
+# Ultimate efficiency: Single clone for ALL targets (tags + branches)
+python scan_releases.py --scan-all-v5 --unified-mode --output-dir ./data
+
+# Unified scanning with custom targets
+python scan_releases.py --versions v5.4.2,v5.3.3 --include-release-branches --unified-mode --output-dir ./data
+
+# Force git-only mode for everything (most consistent)
+python scan_releases.py --scan-all-v5 --unified-mode --git-only --output-dir ./data
+```
+
+#### Traditional Batch Scanning
+```bash
+# Use batch mode for efficient scanning of multiple git targets
+python scan_releases.py --include-release-branches --batch-mode --output-dir ./data
+```
+
+#### List Available Remote Targets
+```bash
+python scan_releases.py --list-remote-targets
 ```
 
 #### Use Git Only (No Docker)
@@ -80,25 +113,44 @@ python scan_releases.py --help
 | `--output-dir DIR` | Directory to store scan results (default: ./data) |
 | `--versions LIST` | Comma-separated list of versions to scan |
 | `--single-version VER` | Scan only one version (for testing) |
-| `--include-branches LIST` | Also scan latest code from specified branches |
+| `--include-branches LIST` | Also scan latest code from custom branches (e.g., master,develop) |
+| `--include-release-branches` | Scan all ESP-IDF release branches (release/v5.0 to release/v5.5) |
+| `--list-release-branches` | Show available ESP-IDF release branches and exit |
+| `--batch-mode` | Use optimized batch scanning (single clone for multiple git targets) |
+| `--scan-all-v5` | Scan all available v5.x tags and release branches |
+| `--unified-mode` | **Ultimate efficiency**: Single clone for ALL targets (recommended) |
+| `--git-only` | Use git for ALL targets, including those with Docker images |
+| `--list-remote-targets` | List all available remote tags and branches without scanning |
 | `--no-docker` | Disable Docker, use git clone only |
 | `--list-docker-images` | Show available Docker images and exit |
 
 ### Scanning Methods
 
-The scanner uses two methods in order of preference:
+The scanner uses multiple methods optimized for different scenarios:
 
-1. **Docker Images** (Primary)
+1. **Docker Images** (Primary for stable releases)
    - Uses official ESP-IDF Docker images from `espressif/idf`
    - Faster and more reliable
    - Pre-configured environment
    - Available for all stable releases
 
-2. **Git Clone** (Fallback)
-   - Clones ESP-IDF repository and checks out specific version
+2. **Individual Git Clone** (Traditional fallback)
+   - Clones ESP-IDF repository for each target separately
    - Used when Docker image not available
    - Required for scanning latest branch code
-   - Slower but more flexible
+   - More flexible but slower
+
+3. **Batch Git Scanning** (Optimized for multiple git targets)
+   - **Single repository clone** for multiple tags/branches
+   - **Dramatically faster** for scanning many git targets
+   - Uses `git checkout` to switch between targets
+   - Good for scanning multiple branches/tags
+
+4. **Unified Scanning** (Ultimate efficiency - **RECOMMENDED**)
+   - **Single clone handles ALL targets** (tags, branches, releases)
+   - **Maximum efficiency** for comprehensive scans
+   - Intelligent fallback: uses Docker only when beneficial
+   - **Best choice** for scanning many targets across different types
 
 ## 🤖 Automated Scanning
 
@@ -244,6 +296,9 @@ pip show esp-idf-sbom
 
 # Verify Docker images
 python scan_releases.py --list-docker-images
+
+# List release branches
+python scan_releases.py --list-release-branches
 
 # Test single version
 python scan_releases.py --single-version v5.4.2 --output-dir ./test

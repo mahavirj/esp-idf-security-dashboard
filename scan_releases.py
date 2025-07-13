@@ -140,7 +140,7 @@ class ESPIDFSecurityScanner:
                 bash -c "
                     pip install -q esp-idf-sbom && \
                     esp-idf-sbom sync-db && \
-                    esp-idf-sbom manifest check --format=json /opt/esp/idf
+                    esp-idf-sbom manifest check --format=json --local-db --no-sync-db /opt/esp/idf
                 "
             """
             
@@ -209,7 +209,7 @@ class ESPIDFSecurityScanner:
                 
                 # Run vulnerability scan
                 result = self.run_command(
-                    f"esp-idf-sbom manifest check --format=json {repo_path}",
+                    f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
                     check=False
                 )
                 
@@ -285,7 +285,7 @@ class ESPIDFSecurityScanner:
                 
                 # Run vulnerability scan
                 result = self.run_command(
-                    f"esp-idf-sbom manifest check --format=json {repo_path}",
+                    f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
                     check=False
                 )
                 
@@ -395,7 +395,7 @@ class ESPIDFSecurityScanner:
                         # Run vulnerability scan
                         logger.info(f"Running vulnerability scan for {target}...")
                         scan_result = self.run_command(
-                            f"esp-idf-sbom manifest check --format=json {repo_path}",
+                            f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
                             check=False
                         )
                         
@@ -737,12 +737,10 @@ class ESPIDFSecurityScanner:
         """Scan all available v5.x tags and release branches efficiently"""
         logger.info("Scanning ESP-IDF v5.x releases and branches...")
         
-        # TEMPORARY: Reduced scope for testing - scan only key versions
+        # TEMPORARY: Reduced scope for testing - scan only one older version
         # TODO: Expand this list after workflow verification
         test_targets = [
-            "v5.4.2",    # Latest stable
-            "v5.3.3",    # Previous stable  
-            "v5.0.9",    # Older version (should have more vulnerabilities)
+            "v5.0.1",    # Older version (should have vulnerabilities)
         ]
         
         logger.info(f"TESTING MODE: Scanning {len(test_targets)} selected versions: {test_targets}")

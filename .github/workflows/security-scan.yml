@@ -166,14 +166,14 @@ jobs:
               echo "🚀 Using ultimate unified mode: scanning ALL v5.x releases and branches in single clone"
               ;;
             "unified-recent")
-              # Recent releases only for testing (reduced scope)
-              SCAN_CMD="python scan_releases.py --versions v5.4.2,v5.3.3,v5.0.9 --unified-mode --output-dir ${{ env.OUTPUT_DIR }}"
-              echo "🔄 Using unified mode for selected recent releases (testing scope)"
+              # Single older version for testing (reduced scope)
+              SCAN_CMD="python scan_releases.py --versions v5.0.1 --unified-mode --output-dir ${{ env.OUTPUT_DIR }}"
+              echo "🔄 Using unified mode for single older version (testing scope)"
               ;;
             "docker-only")
-              # Traditional Docker approach (reduced scope for testing)
-              SCAN_CMD="python scan_releases.py --versions v5.4.2,v5.3.3,v5.0.9 --output-dir ${{ env.OUTPUT_DIR }}"
-              echo "🐳 Using Docker-only mode for selected releases (testing scope)"
+              # Traditional Docker approach (single version for testing)
+              SCAN_CMD="python scan_releases.py --versions v5.0.1 --output-dir ${{ env.OUTPUT_DIR }}"
+              echo "🐳 Using Docker-only mode for single older version (testing scope)"
               ;;
             "git-only")
               # Pure git mode - most consistent, single clone for everything

@@ -1,0 +1,17 @@
+{
+  "last_updated": "2025-07-13T15:19:19.185827Z",
+  "scanned_versions": [
+    "v5.4.2",
+    "v5.3.3",
+    "v5.0.9"
+  ],
+  "failed_versions": [],
+  "total_scanned": 3,
+  "scan_method": "git-batch",
+  "workflow_run": "13",
+  "scanner_info": {
+    "tool": "esp-idf-security-dashboard",
+    "esp_idf_sbom_version": "0.20.1",
+    "batch_mode_used": true
+  }
+}

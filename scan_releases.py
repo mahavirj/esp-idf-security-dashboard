@@ -357,6 +357,23 @@ class ESPIDFSecurityScanner:
                     
                     try:
                         # Clean working directory before checkout to avoid conflicts
+                        # Handle esptool files that cause conflicts due to source->submodule transition
+                        esptool_files = [
+                            "components/esptool_py/esptool/espefuse.py",
+                            "components/esptool_py/esptool/espsecure.py", 
+                            "components/esptool_py/esptool/esptool.py"
+                        ]
+                        for file_path in esptool_files:
+                            full_path = repo_path / file_path
+                            if full_path.exists():
+                                logger.info(f"Removing problematic esptool file: {file_path}")
+                                self.run_command(f"rm -f {file_path}", cwd=repo_path, check=False)
+                        
+                        # Check and clean esptool_py directory if it exists as non-submodule
+                        esptool_dir = repo_path / "components/esptool_py"
+                        if esptool_dir.exists():
+                            self.run_command("git status --porcelain components/esptool_py", cwd=repo_path, check=False)
+                        
                         self.run_command("git clean -fd", cwd=repo_path, check=False)
                         self.run_command("git reset --hard HEAD", cwd=repo_path, check=False)
                         
@@ -741,8 +758,9 @@ class ESPIDFSecurityScanner:
         tags, branches = self.get_available_targets(target_patterns=["v5."])
         release_branches = [b for b in branches if b.startswith("release/v5.")]
         
-        # Filter to v5.x tags only
-        v5_tags = [tag for tag in tags if tag.startswith("v5.")]
+        # Filter to v5.x tags only, excluding rc, dev, beta versions
+        v5_tags = [tag for tag in tags if tag.startswith("v5.") and 
+                   not any(exclude in tag.lower() for exclude in ["rc", "dev", "beta"])]
         
         logger.info(f"Found {len(v5_tags)} v5.x tags and {len(release_branches)} v5.x release branches")
         

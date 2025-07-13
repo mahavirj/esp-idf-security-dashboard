@@ -141,6 +141,9 @@ jobs:
     name: Aggregate Results and Deploy
     needs: security-scan
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     
     steps:
       - name: Checkout repository

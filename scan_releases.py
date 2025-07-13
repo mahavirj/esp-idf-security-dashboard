@@ -328,7 +328,7 @@ class ESPIDFSecurityScanner:
                 logger.error(f"Branch scan failed for {branch}: {e}")
                 return None, None
                 
-    def scan_multiple_targets_with_single_clone(self, targets, repository_url="https://github.com/espressif/esp-idf.git"):
+    def scan_multiple_targets_with_single_clone(self, targets, repository_url="https://github.com/espressif/esp-idf.git", generate_summary=True):
         """Efficiently scan multiple tags/branches with a single repository clone"""
         logger.info(f"Starting batch scan with single clone for {len(targets)} targets")
         
@@ -444,11 +444,39 @@ class ESPIDFSecurityScanner:
                         continue
                 
                 logger.info(f"Batch scan complete: {len(results)}/{len(targets)} targets successful")
+                
+                # Generate scan summary file if requested
+                if generate_summary:
+                    self._generate_scan_summary(results, targets, "git-batch")
+                
                 return results
                 
             except Exception as e:
                 logger.error(f"Batch scan failed: {e}")
                 return {}
+    
+    def _generate_scan_summary(self, results, targets, scan_method):
+        """Generate scan summary file"""
+        summary = {
+            "last_updated": datetime.utcnow().isoformat() + "Z",
+            "scanned_versions": list(results.keys()),
+            "failed_versions": [t for t in targets if t not in results],
+            "total_scanned": len(results),
+            "scan_method": scan_method,
+            "workflow_run": os.getenv("GITHUB_RUN_NUMBER", "local"),
+            "scanner_info": {
+                "tool": "esp-idf-security-dashboard",
+                "esp_idf_sbom_version": self.get_tool_version(),
+                "batch_mode_used": scan_method in ["git-batch", "unified"]
+            }
+        }
+        
+        summary_file = self.output_dir / "scan_summary.json"
+        with open(summary_file, 'w') as f:
+            json.dump(summary, f, indent=2)
+        
+        logger.info(f"Generated scan summary: {summary_file}")
+        return summary
                 
     def get_available_targets(self, repository_url="https://github.com/espressif/esp-idf.git", target_patterns=None):
         """Get available tags and branches from repository without cloning"""
@@ -666,7 +694,9 @@ class ESPIDFSecurityScanner:
         
         if prefer_git_over_docker:
             logger.info("Using git-only mode for all targets (skipping Docker)")
-            return self.scan_multiple_targets_with_single_clone(targets)
+            results = self.scan_multiple_targets_with_single_clone(targets)
+            # Summary is already generated in scan_multiple_targets_with_single_clone
+            return results
         
         # Separate Docker-available vs git-only targets
         docker_targets = [t for t in targets if t in ESP_IDF_DOCKER_IMAGES]
@@ -695,8 +725,11 @@ class ESPIDFSecurityScanner:
             
             # Batch scan git targets (single clone)
             if git_targets:
-                git_results = self.scan_multiple_targets_with_single_clone(git_targets)
+                git_results = self.scan_multiple_targets_with_single_clone(git_targets, generate_summary=False)
                 results.update(git_results)
+            
+            # Generate summary for mixed mode scanning
+            self._generate_scan_summary(results, targets, "mixed")
             
             return results
     

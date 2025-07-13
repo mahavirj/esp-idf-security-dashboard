@@ -11,13 +11,13 @@ on:
       scan_mode:
         description: 'Scanning mode'
         required: true
-        default: 'unified-all-v5'
+        default: 'git-only'
         type: choice
         options:
-          - 'unified-all-v5'           # Most comprehensive - all v5.x tags and branches
+          - 'git-only'                 # Pure git scanning (most consistent, avoids disk space issues)
+          - 'unified-all-v5'           # Most comprehensive - all v5.x tags and branches  
           - 'unified-recent'           # Recent stable releases + release branches
-          - 'docker-only'              # Traditional Docker-based scanning (fastest)
-          - 'git-only'                 # Pure git scanning (most consistent)
+          - 'docker-only'              # Traditional Docker-based scanning (may fail on disk space)
       
       custom_versions:
         description: 'Custom versions to scan (comma-separated, optional)'
@@ -94,13 +94,13 @@ jobs:
             INCLUDE_BRANCHES="${{ github.event.inputs.include_branches }}"
             FORCE_SCAN="${{ github.event.inputs.force_full_scan }}"
           elif [[ "${{ github.event_name }}" == "schedule" ]]; then
-            SCAN_MODE="unified-all-v5"
+            SCAN_MODE="git-only"
             CUSTOM_VERSIONS=""
             INCLUDE_BRANCHES="false"
             FORCE_SCAN="false"
           else
             # Push/PR - quick scan for testing
-            SCAN_MODE="unified-recent"
+            SCAN_MODE="git-only"
             CUSTOM_VERSIONS=""
             INCLUDE_BRANCHES="false"
             FORCE_SCAN="true"

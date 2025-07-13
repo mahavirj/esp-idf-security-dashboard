@@ -77,7 +77,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install esp-idf-sbom
+          pip install -r requirements.txt
           
           # Verify installation
           esp-idf-sbom --version
@@ -140,7 +140,7 @@ jobs:
             
             # For scheduled runs, allow 8-hour cache; for manual runs, check force flag
             CACHE_THRESHOLD=8
-            if (( $(echo "$LAST_SCAN < $CACHE_THRESHOLD" | bc -l) )); then
+            if python -c "exit(0 if float('$LAST_SCAN') < $CACHE_THRESHOLD else 1)"; then
               CACHE_VALID="true"
               echo "✅ Recent scan data found (${LAST_SCAN}h old), skipping scan"
             else

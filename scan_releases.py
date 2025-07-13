@@ -63,6 +63,16 @@ DEFAULT_RELEASES = [
     'v5.0.9', 'v5.0.8'
 ]
 
+# ESP-IDF release branches to scan
+ESP_IDF_RELEASE_BRANCHES = [
+    'release/v5.0',
+    'release/v5.1', 
+    'release/v5.2',
+    'release/v5.3',
+    'release/v5.4',
+    'release/v5.5'
+]
+
 class ESPIDFSecurityScanner:
     def __init__(self, output_dir, use_docker=True):
         self.output_dir = Path(output_dir)
@@ -258,6 +268,142 @@ class ESPIDFSecurityScanner:
                 logger.error(f"Branch scan failed for {branch}: {e}")
                 return None, None
                 
+    def scan_multiple_targets_with_single_clone(self, targets, repository_url="https://github.com/espressif/esp-idf.git"):
+        """Efficiently scan multiple tags/branches with a single repository clone"""
+        logger.info(f"Starting batch scan with single clone for {len(targets)} targets")
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo_path = Path(temp_dir) / "esp-idf"
+            results = {}
+            
+            try:
+                # Clone repository with full history (not shallow)
+                logger.info(f"Cloning ESP-IDF repository with full history...")
+                self.run_command(f"git clone --recursive {repository_url} {repo_path}")
+                
+                # Update NVD database once
+                if not hasattr(self, '_db_synced'):
+                    logger.info("Syncing NVD database...")
+                    try:
+                        self.run_command("esp-idf-sbom sync-db")
+                        self._db_synced = True
+                    except subprocess.CalledProcessError as e:
+                        logger.warning(f"Failed to sync NVD database: {e}")
+                        self._db_synced = True
+                
+                # Scan each target
+                for target in targets:
+                    logger.info(f"Scanning target: {target}")
+                    
+                    try:
+                        # Checkout the target (tag or branch)
+                        checkout_result = self.run_command(f"git checkout {target}", cwd=repo_path, check=False)
+                        if checkout_result.returncode != 0:
+                            logger.error(f"Failed to checkout {target}: {checkout_result.stderr}")
+                            continue
+                        
+                        # Update submodules after checkout
+                        self.run_command("git submodule update --init --recursive", cwd=repo_path)
+                        
+                        # Get commit info for version identifier
+                        commit_result = self.run_command("git rev-parse --short HEAD", cwd=repo_path)
+                        commit_hash = commit_result.stdout.strip()
+                        
+                        date_result = self.run_command("git log -1 --format=%ci", cwd=repo_path)
+                        commit_date = date_result.stdout.strip()
+                        
+                        # Determine if this is a tag or branch and create appropriate version ID
+                        tag_check = self.run_command(f"git tag --points-at HEAD", cwd=repo_path, check=False)
+                        is_tag = target in tag_check.stdout.strip().split('\n') if tag_check.stdout.strip() else False
+                        
+                        if is_tag:
+                            version_id = target  # Use tag name as-is for releases
+                            scan_method = "git-tag"
+                        else:
+                            version_id = f"{target}-{commit_hash}"  # Use branch-hash for branches
+                            scan_method = "git-branch" if not target.startswith("release/") else "git-release-branch"
+                        
+                        # Run vulnerability scan
+                        scan_result = self.run_command(
+                            f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
+                            check=False
+                        )
+                        
+                        if scan_result.returncode not in [0, 1]:
+                            logger.error(f"Scan failed for {target}: {scan_result.stderr}")
+                            continue
+                            
+                        try:
+                            if scan_result.stdout.strip():
+                                parsed_result = json.loads(scan_result.stdout)
+                            else:
+                                parsed_result = {"vulnerabilities": []}
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Failed to parse scan result for {target}: {e}")
+                            continue
+                        
+                        # Store the result
+                        tool_version = self.get_tool_version()
+                        dashboard_data = self.parse_and_store_results(parsed_result, version_id, tool_version, scan_method)
+                        results[version_id] = dashboard_data
+                        
+                        logger.info(f"✅ Successfully scanned {target} as {version_id}")
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to scan {target}: {e}")
+                        continue
+                
+                logger.info(f"Batch scan complete: {len(results)}/{len(targets)} targets successful")
+                return results
+                
+            except Exception as e:
+                logger.error(f"Batch scan failed: {e}")
+                return {}
+                
+    def get_available_targets(self, repository_url="https://github.com/espressif/esp-idf.git", target_patterns=None):
+        """Get available tags and branches from repository without cloning"""
+        logger.info("Fetching available targets from repository...")
+        
+        try:
+            # Get remote tags
+            tags_result = self.run_command(f"git ls-remote --tags {repository_url}")
+            available_tags = []
+            for line in tags_result.stdout.strip().split('\n'):
+                if line and 'refs/tags/' in line:
+                    tag = line.split('refs/tags/')[-1]
+                    # Skip annotated tag references (^{})
+                    if not tag.endswith('^{}'):
+                        available_tags.append(tag)
+            
+            # Get remote branches  
+            branches_result = self.run_command(f"git ls-remote --heads {repository_url}")
+            available_branches = []
+            for line in branches_result.stdout.strip().split('\n'):
+                if line and 'refs/heads/' in line:
+                    branch = line.split('refs/heads/')[-1]
+                    available_branches.append(branch)
+            
+            # Filter based on patterns if provided
+            if target_patterns:
+                filtered_tags = []
+                filtered_branches = []
+                
+                for pattern in target_patterns:
+                    # Match tags
+                    filtered_tags.extend([tag for tag in available_tags if pattern in tag])
+                    # Match branches
+                    filtered_branches.extend([branch for branch in available_branches if pattern in branch])
+                
+                available_tags = list(set(filtered_tags))
+                available_branches = list(set(filtered_branches))
+            
+            logger.info(f"Found {len(available_tags)} tags and {len(available_branches)} branches")
+            return available_tags, available_branches
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch remote targets: {e}")
+            return [], []
+                
     def parse_and_store_results(self, scan_result, version, tool_version, scan_method="docker"):
         """Parse scan results and store in dashboard format"""
         vulnerabilities = scan_result.get("vulnerabilities", [])
@@ -335,25 +481,64 @@ class ESPIDFSecurityScanner:
         
         return dashboard_data
         
-    def scan_releases(self, releases, include_branches=None):
+    def scan_releases(self, releases, include_branches=None, include_release_branches=False, use_batch_mode=False):
         """Scan multiple ESP-IDF releases and optionally latest branches"""
         results = {}
         
-        # Scan specified releases
-        logger.info(f"Scanning {len(releases)} releases: {releases}")
-        
-        for version in releases:
-            logger.info(f"Processing {version}")
-            result = self.scan_version(version)
-            if result:
-                results[version] = result
-                logger.info(f"✅ Successfully scanned {version}")
-            else:
-                logger.error(f"❌ Failed to scan {version}")
+        # Collect all git-based targets for batch scanning if enabled
+        git_targets = []
+        if use_batch_mode and (include_branches or include_release_branches or any(v not in ESP_IDF_DOCKER_IMAGES for v in releases)):
+            # Add releases that don't have Docker images
+            git_targets.extend([v for v in releases if v not in ESP_IDF_DOCKER_IMAGES])
+            
+            # Add release branches
+            if include_release_branches:
+                git_targets.extend(ESP_IDF_RELEASE_BRANCHES)
                 
-        # Scan latest branches if requested
+            # Add custom branches
+            if include_branches:
+                git_targets.extend(include_branches)
+        
+        # Use batch mode for git targets if there are multiple
+        if use_batch_mode and len(git_targets) > 1:
+            logger.info(f"Using optimized batch scanning for {len(git_targets)} git targets")
+            batch_results = self.scan_multiple_targets_with_single_clone(git_targets)
+            results.update(batch_results)
+            
+            # Remove git targets from individual processing
+            releases = [v for v in releases if v in ESP_IDF_DOCKER_IMAGES]
+            include_branches = None
+            include_release_branches = False
+        
+        # Scan specified releases with Docker (if available)
+        if releases:
+            logger.info(f"Scanning {len(releases)} releases: {releases}")
+            
+            for version in releases:
+                logger.info(f"Processing {version}")
+                result = self.scan_version(version)
+                if result:
+                    results[version] = result
+                    logger.info(f"✅ Successfully scanned {version}")
+                else:
+                    logger.error(f"❌ Failed to scan {version}")
+                
+        # Scan ESP-IDF release branches if requested (and not in batch mode)
+        if include_release_branches:
+            logger.info(f"Scanning ESP-IDF release branches: {ESP_IDF_RELEASE_BRANCHES}")
+            for branch in ESP_IDF_RELEASE_BRANCHES:
+                version_id, scan_result = self.scan_latest_branch(branch)
+                if scan_result:
+                    tool_version = self.get_tool_version()
+                    dashboard_data = self.parse_and_store_results(scan_result, version_id, tool_version, "git-release-branch")
+                    results[version_id] = dashboard_data
+                    logger.info(f"✅ Successfully scanned release branch {branch} as {version_id}")
+                else:
+                    logger.error(f"❌ Failed to scan release branch {branch}")
+                
+        # Scan custom branches if requested (and not in batch mode)
         if include_branches:
-            logger.info(f"Scanning latest code from branches: {include_branches}")
+            logger.info(f"Scanning custom branches: {include_branches}")
             for branch in include_branches:
                 version_id, scan_result = self.scan_latest_branch(branch)
                 if scan_result:
@@ -372,7 +557,8 @@ class ESPIDFSecurityScanner:
             "scanner_info": {
                 "tool": "esp-idf-security-dashboard",
                 "methods": ["docker", "git"] if self.use_docker else ["git"],
-                "esp_idf_sbom_version": self.get_tool_version()
+                "esp_idf_sbom_version": self.get_tool_version(),
+                "batch_mode_used": use_batch_mode and len(git_targets) > 1
             }
         }
         
@@ -383,6 +569,27 @@ class ESPIDFSecurityScanner:
         logger.info(f"Scan complete. Results saved to {self.output_dir}")
         logger.info(f"Successfully scanned: {len(results)} items")
         return results
+        
+    def scan_all_v5_releases(self, use_batch_mode=True):
+        """Scan all available v5.x tags and release branches efficiently"""
+        logger.info("Scanning all ESP-IDF v5.x releases and branches...")
+        
+        # Get available v5.x tags and release branches
+        tags, branches = self.get_available_targets(target_patterns=["v5."])
+        release_branches = [b for b in branches if b.startswith("release/v5.")]
+        
+        # Filter to v5.x tags only
+        v5_tags = [tag for tag in tags if tag.startswith("v5.")]
+        
+        logger.info(f"Found {len(v5_tags)} v5.x tags and {len(release_branches)} v5.x release branches")
+        
+        if use_batch_mode:
+            # Combine all git targets for batch scanning
+            all_targets = v5_tags + release_branches
+            return self.scan_multiple_targets_with_single_clone(all_targets)
+        else:
+            # Use traditional scanning approach
+            return self.scan_releases(v5_tags, include_branches=release_branches)
 
 def main():
     parser = argparse.ArgumentParser(description="Scan ESP-IDF releases for security vulnerabilities")
@@ -393,7 +600,17 @@ def main():
     parser.add_argument("--single-version", 
                        help="Scan a single version (for testing)")
     parser.add_argument("--include-branches",
-                       help="Comma-separated list of branches to scan (e.g., master,release-v5.4)")
+                       help="Comma-separated list of custom branches to scan (e.g., master,develop)")
+    parser.add_argument("--include-release-branches", action="store_true",
+                       help="Scan all ESP-IDF release branches (release/v5.0 to release/v5.5)")
+    parser.add_argument("--list-release-branches", action="store_true",
+                       help="List available ESP-IDF release branches and exit")
+    parser.add_argument("--batch-mode", action="store_true",
+                       help="Use optimized batch scanning (single clone for multiple targets)")
+    parser.add_argument("--scan-all-v5", action="store_true",
+                       help="Scan all available v5.x tags and release branches")
+    parser.add_argument("--list-remote-targets", action="store_true",
+                       help="List all available remote tags and branches without scanning")
     parser.add_argument("--no-docker", action="store_true",
                        help="Disable Docker and use git clone only")
     parser.add_argument("--list-docker-images", action="store_true",
@@ -407,29 +624,65 @@ def main():
             print(f"  {version}: {image}")
         print(f"\nTotal: {len(ESP_IDF_DOCKER_IMAGES)} images")
         return
+        
+    if args.list_release_branches:
+        print("Available ESP-IDF release branches:")
+        for branch in ESP_IDF_RELEASE_BRANCHES:
+            print(f"  {branch}")
+        print(f"\nTotal: {len(ESP_IDF_RELEASE_BRANCHES)} release branches")
+        print("\nTo scan these branches, use: --include-release-branches")
+        return
+        
+    if args.list_remote_targets:
+        scanner = ESPIDFSecurityScanner("./temp", use_docker=False)
+        tags, branches = scanner.get_available_targets()
+        print(f"Available remote tags ({len(tags)}):")
+        for tag in sorted(tags)[:20]:  # Show first 20
+            print(f"  {tag}")
+        if len(tags) > 20:
+            print(f"  ... and {len(tags) - 20} more")
+            
+        print(f"\nAvailable remote branches ({len(branches)}):")
+        for branch in sorted(branches):
+            print(f"  {branch}")
+        return
     
     try:
         scanner = ESPIDFSecurityScanner(args.output_dir, use_docker=not args.no_docker)
         
-        if args.single_version:
-            versions = [args.single_version]
-        elif args.versions:
-            versions = [v.strip() for v in args.versions.split(',')]
+        # Handle scan-all-v5 mode
+        if args.scan_all_v5:
+            logger.info(f"ESP-IDF Security Scanner starting in scan-all-v5 mode...")
+            logger.info(f"Output directory: {args.output_dir}")
+            logger.info(f"Batch mode: {args.batch_mode}")
+            
+            results = scanner.scan_all_v5_releases(use_batch_mode=args.batch_mode)
         else:
-            versions = DEFAULT_RELEASES
+            # Regular scanning mode
+            if args.single_version:
+                versions = [args.single_version]
+            elif args.versions:
+                versions = [v.strip() for v in args.versions.split(',')]
+            else:
+                versions = DEFAULT_RELEASES
+                
+            branches = None
+            if args.include_branches:
+                branches = [b.strip() for b in args.include_branches.split(',')]
+                
+            logger.info(f"ESP-IDF Security Scanner starting...")
+            logger.info(f"Output directory: {args.output_dir}")
+            logger.info(f"Using Docker: {not args.no_docker}")
+            logger.info(f"Batch mode: {args.batch_mode}")
+            logger.info(f"Versions to scan: {len(versions)}")
+            if args.include_release_branches:
+                logger.info(f"Release branches to scan: {len(ESP_IDF_RELEASE_BRANCHES)}")
+            if branches:
+                logger.info(f"Custom branches to scan: {branches}")
             
-        branches = None
-        if args.include_branches:
-            branches = [b.strip() for b in args.include_branches.split(',')]
-            
-        logger.info(f"ESP-IDF Security Scanner starting...")
-        logger.info(f"Output directory: {args.output_dir}")
-        logger.info(f"Using Docker: {not args.no_docker}")
-        logger.info(f"Versions to scan: {len(versions)}")
-        if branches:
-            logger.info(f"Branches to scan: {branches}")
-        
-        results = scanner.scan_releases(versions, include_branches=branches)
+            results = scanner.scan_releases(versions, include_branches=branches, 
+                                          include_release_branches=args.include_release_branches,
+                                          use_batch_mode=args.batch_mode)
         
         if results:
             print(f"\n✅ Successfully scanned {len(results)} items")

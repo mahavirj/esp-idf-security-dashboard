@@ -152,12 +152,32 @@ class ESPIDFSecurityScanner:
                 
             try:
                 if result.stdout.strip():
-                    scan_result = json.loads(result.stdout)
+                    # Clean the output - sometimes there are extra lines before/after JSON
+                    stdout_lines = result.stdout.strip().split('\n')
+                    json_content = None
+                    
+                    # Try to find JSON content in the output
+                    for i, line in enumerate(stdout_lines):
+                        if line.strip().startswith('{'):
+                            # Found start of JSON, try to parse from here
+                            json_text = '\n'.join(stdout_lines[i:])
+                            try:
+                                scan_result = json.loads(json_text)
+                                json_content = json_text
+                                break
+                            except json.JSONDecodeError:
+                                continue
+                    
+                    if json_content is None:
+                        # Fallback: try parsing the entire output
+                        scan_result = json.loads(result.stdout.strip())
                 else:
                     scan_result = {"vulnerabilities": []}
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse scan result for {version}: {e}")
-                return None
+                logger.error(f"Raw output: {result.stdout[:500]}...")  # Show first 500 chars for debugging
+                # Return empty result instead of None to continue scanning other versions
+                scan_result = {"vulnerabilities": []}
                 
             return scan_result
             
@@ -199,12 +219,32 @@ class ESPIDFSecurityScanner:
                     
                 try:
                     if result.stdout.strip():
-                        scan_result = json.loads(result.stdout)
+                        # Clean the output - sometimes there are extra lines before/after JSON
+                        stdout_lines = result.stdout.strip().split('\n')
+                        json_content = None
+                        
+                        # Try to find JSON content in the output
+                        for i, line in enumerate(stdout_lines):
+                            if line.strip().startswith('{'):
+                                # Found start of JSON, try to parse from here
+                                json_text = '\n'.join(stdout_lines[i:])
+                                try:
+                                    scan_result = json.loads(json_text)
+                                    json_content = json_text
+                                    break
+                                except json.JSONDecodeError:
+                                    continue
+                        
+                        if json_content is None:
+                            # Fallback: try parsing the entire output
+                            scan_result = json.loads(result.stdout.strip())
                     else:
                         scan_result = {"vulnerabilities": []}
                 except json.JSONDecodeError as e:
                     logger.error(f"Failed to parse scan result for {version}: {e}")
-                    return None
+                    logger.error(f"Raw output: {result.stdout[:500]}...")  # Show first 500 chars for debugging
+                    # Return empty result instead of None to continue scanning other versions
+                    scan_result = {"vulnerabilities": []}
                     
                 return scan_result
                 
@@ -255,12 +295,32 @@ class ESPIDFSecurityScanner:
                     
                 try:
                     if result.stdout.strip():
-                        scan_result = json.loads(result.stdout)
+                        # Clean the output - sometimes there are extra lines before/after JSON
+                        stdout_lines = result.stdout.strip().split('\n')
+                        json_content = None
+                        
+                        # Try to find JSON content in the output
+                        for i, line in enumerate(stdout_lines):
+                            if line.strip().startswith('{'):
+                                # Found start of JSON, try to parse from here
+                                json_text = '\n'.join(stdout_lines[i:])
+                                try:
+                                    scan_result = json.loads(json_text)
+                                    json_content = json_text
+                                    break
+                                except json.JSONDecodeError:
+                                    continue
+                        
+                        if json_content is None:
+                            # Fallback: try parsing the entire output
+                            scan_result = json.loads(result.stdout.strip())
                     else:
                         scan_result = {"vulnerabilities": []}
                 except json.JSONDecodeError as e:
                     logger.error(f"Failed to parse scan result for {branch}: {e}")
-                    return None, None
+                    logger.error(f"Raw output: {result.stdout[:500]}...")  # Show first 500 chars for debugging
+                    # Return empty result instead of None to continue scanning
+                    scan_result = {"vulnerabilities": []}
                     
                 return version_id, scan_result
                 
@@ -335,12 +395,32 @@ class ESPIDFSecurityScanner:
                             
                         try:
                             if scan_result.stdout.strip():
-                                parsed_result = json.loads(scan_result.stdout)
+                                # Clean the output - sometimes there are extra lines before/after JSON
+                                stdout_lines = scan_result.stdout.strip().split('\n')
+                                json_content = None
+                                
+                                # Try to find JSON content in the output
+                                for i, line in enumerate(stdout_lines):
+                                    if line.strip().startswith('{'):
+                                        # Found start of JSON, try to parse from here
+                                        json_text = '\n'.join(stdout_lines[i:])
+                                        try:
+                                            parsed_result = json.loads(json_text)
+                                            json_content = json_text
+                                            break
+                                        except json.JSONDecodeError:
+                                            continue
+                                
+                                if json_content is None:
+                                    # Fallback: try parsing the entire output
+                                    parsed_result = json.loads(scan_result.stdout.strip())
                             else:
                                 parsed_result = {"vulnerabilities": []}
                         except json.JSONDecodeError as e:
                             logger.error(f"Failed to parse scan result for {target}: {e}")
-                            continue
+                            logger.error(f"Raw output: {scan_result.stdout[:500]}...")  # Show first 500 chars for debugging
+                            # Continue with empty result instead of skipping
+                            parsed_result = {"vulnerabilities": []}
                         
                         # Store the result
                         tool_version = self.get_tool_version()

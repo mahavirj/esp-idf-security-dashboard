@@ -392,10 +392,10 @@ class ESPIDFSecurityScanner:
                             version_id = f"{target}-{commit_hash}"  # Use branch-hash for branches
                             scan_method = "git-branch" if not target.startswith("release/") else "git-release-branch"
                         
-                        # Run vulnerability scan with debug output
+                        # Run vulnerability scan
                         logger.info(f"Running vulnerability scan for {target}...")
                         scan_result = self.run_command(
-                            f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db --debug {repo_path}",
+                            f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
                             check=False
                         )
                         

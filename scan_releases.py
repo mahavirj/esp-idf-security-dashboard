@@ -356,14 +356,23 @@ class ESPIDFSecurityScanner:
                     logger.info(f"Scanning target: {target}")
                     
                     try:
+                        # Clean working directory before checkout to avoid conflicts
+                        self.run_command("git clean -fd", cwd=repo_path, check=False)
+                        self.run_command("git reset --hard HEAD", cwd=repo_path, check=False)
+                        
                         # Checkout the target (tag or branch)
                         checkout_result = self.run_command(f"git checkout {target}", cwd=repo_path, check=False)
                         if checkout_result.returncode != 0:
                             logger.error(f"Failed to checkout {target}: {checkout_result.stderr}")
                             continue
                         
-                        # Update submodules after checkout
-                        self.run_command("git submodule update --init --recursive", cwd=repo_path)
+                        # Update submodules after checkout (critical for finding vulnerabilities)
+                        logger.info(f"Initializing submodules for {target}...")
+                        submodule_result = self.run_command("git submodule update --init --recursive", cwd=repo_path, check=False)
+                        if submodule_result.returncode != 0:
+                            logger.warning(f"Submodule initialization failed for {target}: {submodule_result.stderr}")
+                        else:
+                            logger.info(f"Submodules initialized successfully for {target}")
                         
                         # Get commit info for version identifier
                         commit_result = self.run_command("git rev-parse --short HEAD", cwd=repo_path)
@@ -383,9 +392,10 @@ class ESPIDFSecurityScanner:
                             version_id = f"{target}-{commit_hash}"  # Use branch-hash for branches
                             scan_method = "git-branch" if not target.startswith("release/") else "git-release-branch"
                         
-                        # Run vulnerability scan
+                        # Run vulnerability scan with debug output
+                        logger.info(f"Running vulnerability scan for {target}...")
                         scan_result = self.run_command(
-                            f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
+                            f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db --debug {repo_path}",
                             check=False
                         )
                         

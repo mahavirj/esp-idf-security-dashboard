@@ -140,7 +140,7 @@ class ESPIDFSecurityScanner:
                 bash -c "
                     pip install -q esp-idf-sbom && \
                     esp-idf-sbom sync-db && \
-                    esp-idf-sbom manifest check --format=json --local-db --no-sync-db /opt/esp/idf
+                    esp-idf-sbom manifest check --format=json /opt/esp/idf
                 "
             """
             
@@ -209,7 +209,7 @@ class ESPIDFSecurityScanner:
                 
                 # Run vulnerability scan
                 result = self.run_command(
-                    f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
+                    f"esp-idf-sbom manifest check --format=json {repo_path}",
                     check=False
                 )
                 
@@ -285,7 +285,7 @@ class ESPIDFSecurityScanner:
                 
                 # Run vulnerability scan
                 result = self.run_command(
-                    f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
+                    f"esp-idf-sbom manifest check --format=json {repo_path}",
                     check=False
                 )
                 
@@ -395,7 +395,7 @@ class ESPIDFSecurityScanner:
                         # Run vulnerability scan
                         logger.info(f"Running vulnerability scan for {target}...")
                         scan_result = self.run_command(
-                            f"esp-idf-sbom manifest check --format=json --local-db --no-sync-db {repo_path}",
+                            f"esp-idf-sbom manifest check --format=json {repo_path}",
                             check=False
                         )
                         

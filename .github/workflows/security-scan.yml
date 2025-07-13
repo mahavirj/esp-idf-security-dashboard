@@ -476,22 +476,22 @@ jobs:
             echo "### 📈 Results" >> $GITHUB_STEP_SUMMARY
             
             # Extract data for summary
-            python << 'EOF'
-            import json
-            
-            try:
-                with open('${{ env.OUTPUT_DIR }}/scan_summary.json', 'r') as f:
-                    summary = json.load(f)
-                
-                print(f"- **Items Scanned**: {summary.get('total_scanned', 0)}")
-                print(f"- **Tool Version**: {summary.get('scanner_info', {}).get('esp_idf_sbom_version', 'unknown')}")
-                
-                optimization = "✅ Optimized (Unified/Batch)" if summary.get('scanner_info', {}).get('batch_mode_used') else "⚠️ Standard (Individual)"
-                print(f"- **Optimization**: {optimization}")
-                
-            except Exception as e:
-                print(f"- **Status**: ❌ Error reading summary: {e}")
-            EOF
+            python << 'EOF' >> $GITHUB_STEP_SUMMARY
+import json
+
+try:
+    with open('${{ env.OUTPUT_DIR }}/scan_summary.json', 'r') as f:
+        summary = json.load(f)
+    
+    print(f"- **Items Scanned**: {summary.get('total_scanned', 0)}")
+    print(f"- **Tool Version**: {summary.get('scanner_info', {}).get('esp_idf_sbom_version', 'unknown')}")
+    
+    optimization = "✅ Optimized (Unified/Batch)" if summary.get('scanner_info', {}).get('batch_mode_used') else "⚠️ Standard (Individual)"
+    print(f"- **Optimization**: {optimization}")
+    
+except Exception as e:
+    print(f"- **Status**: ❌ Error reading summary: {e}")
+EOF
             
             # Add vulnerability counts if validation ran
             if [[ "${{ steps.validate.outputs.total_vulnerabilities }}" != "" ]]; then

@@ -737,19 +737,22 @@ class ESPIDFSecurityScanner:
         """Scan all available v5.x tags and release branches efficiently"""
         logger.info("Scanning ESP-IDF v5.x releases and branches...")
         
-        # TEMPORARY: Reduced scope for testing - scan only one older version
-        # TODO: Expand this list after workflow verification
-        test_targets = [
-            "v5.0.1",    # Older version (should have vulnerabilities)
-        ]
+        # Get available v5.x tags and release branches
+        tags, branches = self.get_available_targets(target_patterns=["v5."])
+        release_branches = [b for b in branches if b.startswith("release/v5.")]
         
-        logger.info(f"TESTING MODE: Scanning {len(test_targets)} selected versions: {test_targets}")
-        logger.info("This is a reduced scope for workflow verification")
+        # Filter to v5.x tags only
+        v5_tags = [tag for tag in tags if tag.startswith("v5.")]
+        
+        logger.info(f"Found {len(v5_tags)} v5.x tags and {len(release_branches)} v5.x release branches")
         
         if use_unified_mode:
-            return self.scan_unified_targets(test_targets, prefer_git_over_docker)
+            # Combine all targets for unified scanning
+            all_targets = v5_tags + release_branches
+            return self.scan_unified_targets(all_targets, prefer_git_over_docker)
         else:
-            return self.scan_releases(test_targets, include_branches=[])
+            # Use traditional scanning approach
+            return self.scan_releases(v5_tags, include_branches=release_branches)
 
 def main():
     parser = argparse.ArgumentParser(description="Scan ESP-IDF releases for security vulnerabilities")

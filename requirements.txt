@@ -1,1 +1,1 @@
-esp-idf-sbom>=0.15.0
+esp-idf-sbom

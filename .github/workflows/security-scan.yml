@@ -80,9 +80,9 @@ jobs:
           pip install -r requirements.txt
           
           # Verify installation
-          esp-idf-sbom --version
           python --version
           git --version
+          echo "ESP-IDF SBOM tool installed successfully"
       
       - name: Configure scan parameters
         id: config

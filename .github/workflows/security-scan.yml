@@ -392,6 +392,39 @@ jobs:
               }
             }
       
+      - name: Commit scan results to repository
+        if: steps.cache_check.outputs.cache_valid != 'true' && github.ref == 'refs/heads/main'
+        run: |
+          # Configure git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Check if there are any changes to commit
+          if [[ -d "${{ env.OUTPUT_DIR }}" && $(ls -A ${{ env.OUTPUT_DIR }}) ]]; then
+            git add ${{ env.OUTPUT_DIR }}/
+            
+            # Check if there are actually changes to commit
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "chore: update security scan results
+
+              - Updated scan data from workflow run ${{ github.run_number }}
+              - Scan mode: ${{ steps.config.outputs.scan_mode }}
+              - Total scanned: ${{ steps.validate.outputs.total_scanned || 'unknown' }}
+              - Total vulnerabilities: ${{ steps.validate.outputs.total_vulnerabilities || 'unknown' }}
+              
+              🤖 Generated with [Claude Code](https://claude.ai/code)
+              
+              Co-Authored-By: Claude <noreply@anthropic.com>"
+              
+              git push
+              echo "✅ Scan results committed and pushed successfully"
+            fi
+          else
+            echo "No scan data to commit"
+          fi
+
       - name: Upload scan results as artifacts
         uses: actions/upload-artifact@v4
         if: always()

@@ -591,7 +591,9 @@ class ESPIDFSecurityScanner:
         }
         
         # Save to output directory
-        output_file = self.output_dir / f"{version}.json"
+        # Sanitize version for filename (replace / with _)
+        safe_filename = version.replace("/", "_")
+        output_file = self.output_dir / f"{safe_filename}.json"
         with open(output_file, 'w') as f:
             json.dump(dashboard_data, f, indent=2)
             

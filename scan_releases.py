@@ -541,7 +541,29 @@ class ESPIDFSecurityScanner:
                 
     def parse_and_store_results(self, scan_result, version, tool_version, scan_method="docker"):
         """Parse scan results and store in dashboard format"""
-        vulnerabilities = scan_result.get("vulnerabilities", [])
+        # Handle esp-idf-sbom format with 'records' array
+        if "records" in scan_result:
+            # Extract vulnerabilities from esp-idf-sbom format
+            raw_records = scan_result.get("records", [])
+            vulnerabilities = []
+            
+            for record in raw_records:
+                if record.get("vulnerable") == "YES":
+                    # Convert esp-idf-sbom record to dashboard format
+                    vuln = {
+                        "cve_id": record.get("cve_id", ""),
+                        "component": record.get("pkg_name", ""),
+                        "component_version": record.get("pkg_version", ""),
+                        "severity": record.get("cvss_base_severity", "UNKNOWN").upper(),
+                        "score": record.get("cvss_base_score", ""),
+                        "vector": record.get("cvss_vector_string", ""),
+                        "description": record.get("cve_desc", ""),
+                        "link": record.get("cve_link", "")
+                    }
+                    vulnerabilities.append(vuln)
+        else:
+            # Fallback to old format for backwards compatibility
+            vulnerabilities = scan_result.get("vulnerabilities", [])
         
         # Count vulnerabilities by severity
         severity_count = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}

@@ -1632,15 +1632,13 @@
                 })
                 .join('');
                 
-            const moreVersions = fixedInVersions.length > 5 ? ` and ${fixedInVersions.length - 5} more` : '';
-            
             if (isCurrentVersionFixed) {
                 return `
                     <div class="idf-fix-info">
                         <div class="fix-title">CVE Fixed in Current ESP-IDF Release</div>
                         <div>This vulnerability has been resolved in ESP-IDF ${currentVersion}</div>
                         <div style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--dark-gray);">
-                            Also fixed in: ${fixedBadges}${moreVersions}
+                            Fixed in following ESP-IDF versions: ${fixedBadges}
                         </div>
                     </div>
                 `;
@@ -1654,7 +1652,7 @@
                             Fixed in ESP-IDF ${earliestFix} and later versions
                         </div>
                         <div class="idf-fix-versions" style="margin-top: 0.5rem;">
-                            ${fixedBadges}${moreVersions}
+                            Fixed in following ESP-IDF versions: ${fixedBadges}
                         </div>
                     </div>
                 `;
@@ -1774,7 +1772,15 @@
             const element = document.getElementById('cveCrossReference');
             if (element.style.display === 'none') {
                 element.style.display = 'block';
-                analyzeCVEsAcrossReleases();
+                
+                // Show loading notification
+                const content = document.getElementById('cveAnalysisContent');
+                content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--dark-gray);"><div style="margin-bottom: 1rem;">🔄 Analyzing CVEs across ESP-IDF releases...</div><div style="font-size: 0.9rem;">This may take a few moments</div></div>';
+                
+                // Add small delay to show loading message
+                setTimeout(() => {
+                    analyzeCVEsAcrossReleases();
+                }, 100);
             } else {
                 element.style.display = 'none';
             }
@@ -1784,7 +1790,15 @@
             const element = document.getElementById('branchCveCrossReference');
             if (element.style.display === 'none') {
                 element.style.display = 'block';
-                analyzeCVEsAcrossBranches();
+                
+                // Show loading notification
+                const content = document.getElementById('branchCveAnalysisContent');
+                content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--dark-gray);"><div style="margin-bottom: 1rem;">🔄 Analyzing CVEs across ESP-IDF release branches...</div><div style="font-size: 0.9rem;">This may take a few moments</div></div>';
+                
+                // Add small delay to show loading message
+                setTimeout(() => {
+                    analyzeCVEsAcrossBranches();
+                }, 100);
             } else {
                 element.style.display = 'none';
             }

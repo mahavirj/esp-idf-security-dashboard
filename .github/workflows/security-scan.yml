@@ -402,11 +402,7 @@ jobs:
               - Updated scan data from workflow run ${{ github.run_number }}
               - Scan mode: ${{ steps.config.outputs.scan_mode }}
               - Total scanned: ${{ steps.validate.outputs.total_scanned || 'unknown' }}
-              - Total vulnerabilities: ${{ steps.validate.outputs.total_vulnerabilities || 'unknown' }}
-              
-              🤖 Generated with [Claude Code](https://claude.ai/code)
-              
-              Co-Authored-By: Claude <noreply@anthropic.com>"
+              - Total vulnerabilities: ${{ steps.validate.outputs.total_vulnerabilities || 'unknown' }}"
               
               git push
               echo "✅ Scan results committed and pushed successfully"

@@ -145,6 +145,188 @@
             display: block;
         }
 
+        /* Loading Overlay Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .loading-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #e9ecef;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .loading-status {
+            font-size: 1rem;
+            color: var(--dark-gray);
+            margin-bottom: 1.5rem;
+            min-height: 24px;
+        }
+
+        .loading-progress {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), #0052a3);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .loading-details {
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+            opacity: 0.8;
+        }
+
+        .loading-steps {
+            text-align: left;
+            margin-top: 1rem;
+        }
+
+        .loading-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .loading-step-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .loading-step.pending .loading-step-icon {
+            background: #e9ecef;
+            color: var(--dark-gray);
+        }
+
+        .loading-step.active .loading-step-icon {
+            background: var(--primary-color);
+            color: white;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .loading-step.completed .loading-step-icon {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .loading-step.error .loading-step-icon {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        /* Skeleton Loading for Cards */
+        .skeleton-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .skeleton-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skeleton-number {
+            width: 80px;
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 0 auto 1rem;
+            position: relative;
+        }
+
+        .skeleton-label {
+            width: 120px;
+            height: 16px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 0 auto;
+        }
+
+        .skeleton-shimmer {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
         .controls {
             background: white;
             padding: 1.5rem;
@@ -446,6 +628,37 @@
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-title">Loading ESP-IDF Security Dashboard</div>
+            <div class="loading-status" id="loadingStatus">Initializing...</div>
+            <div class="loading-progress">
+                <div class="loading-progress-bar" id="loadingProgressBar"></div>
+            </div>
+            <div class="loading-details" id="loadingDetails">Please wait while we load the vulnerability data</div>
+            <div class="loading-steps" id="loadingSteps">
+                <div class="loading-step pending" id="step1">
+                    <div class="loading-step-icon">1</div>
+                    <span>Loading scan summary</span>
+                </div>
+                <div class="loading-step pending" id="step2">
+                    <div class="loading-step-icon">2</div>
+                    <span>Loading vulnerability data</span>
+                </div>
+                <div class="loading-step pending" id="step3">
+                    <div class="loading-step-icon">3</div>
+                    <span>Processing statistics</span>
+                </div>
+                <div class="loading-step pending" id="step4">
+                    <div class="loading-step-icon">4</div>
+                    <span>Rendering dashboard</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="header">
         <div class="container">
             <h1>ESP-IDF Security Dashboard</h1>
@@ -467,23 +680,33 @@
             <div class="tab-content active" id="releases-tab">
                 <div class="stats-grid" id="statsGrid">
                     <div class="stat-card">
-                        <div class="stat-number critical" id="totalCritical">-</div>
+                        <div class="stat-number critical" id="totalCritical">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">Critical</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number high" id="totalHigh">-</div>
+                        <div class="stat-number high" id="totalHigh">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">High</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number medium" id="totalMedium">-</div>
+                        <div class="stat-number medium" id="totalMedium">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">Medium</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number low" id="totalLow">-</div>
+                        <div class="stat-number low" id="totalLow">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">Low</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="totalReleases">-</div>
+                        <div class="stat-number" id="totalReleases">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">Releases Scanned</div>
                     </div>
                 </div>
@@ -535,23 +758,33 @@
             <div class="tab-content" id="branches-tab">
                 <div class="stats-grid" id="branchesStatsGrid">
                     <div class="stat-card">
-                        <div class="stat-number critical" id="branchesTotalCritical">-</div>
+                        <div class="stat-number critical" id="branchesTotalCritical">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">Critical</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number high" id="branchesTotalHigh">-</div>
+                        <div class="stat-number high" id="branchesTotalHigh">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">High</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number medium" id="branchesTotalMedium">-</div>
+                        <div class="stat-number medium" id="branchesTotalMedium">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">Medium</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number low" id="branchesTotalLow">-</div>
+                        <div class="stat-number low" id="branchesTotalLow">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">Low</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="totalBranches">-</div>
+                        <div class="stat-number" id="totalBranches">
+                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                        </div>
                         <div class="stat-label">Branches Scanned</div>
                     </div>
                 </div>
@@ -605,6 +838,96 @@
         let dashboardData = {};
         let allReleases = [];
         let currentTab = 'releases';
+        let loadingSteps = [
+            { id: 'step1', name: 'Loading scan summary', progress: 10 },
+            { id: 'step2', name: 'Loading vulnerability data', progress: 60 },
+            { id: 'step3', name: 'Processing statistics', progress: 80 },
+            { id: 'step4', name: 'Rendering dashboard', progress: 100 }
+        ];
+        let currentStep = 0;
+
+        // Loading Management Functions
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            updateLoadingStep(0, 'active');
+        }
+
+        function hideLoading() {
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 500); // Small delay to show completion
+        }
+
+        function updateLoadingStep(stepIndex, status = 'active') {
+            const step = loadingSteps[stepIndex];
+            if (!step) return;
+
+            // Update previous steps to completed
+            for (let i = 0; i < stepIndex; i++) {
+                const prevStep = document.getElementById(loadingSteps[i].id);
+                prevStep.className = 'loading-step completed';
+                prevStep.querySelector('.loading-step-icon').textContent = '✓';
+            }
+
+            // Update current step
+            const currentStepEl = document.getElementById(step.id);
+            currentStepEl.className = `loading-step ${status}`;
+            
+            if (status === 'completed') {
+                currentStepEl.querySelector('.loading-step-icon').textContent = '✓';
+            } else if (status === 'error') {
+                currentStepEl.querySelector('.loading-step-icon').textContent = '✗';
+            }
+
+            // Update progress bar
+            updateProgressBar(step.progress);
+            
+            // Update status text
+            document.getElementById('loadingStatus').textContent = step.name;
+            
+            currentStep = stepIndex;
+        }
+
+        function updateProgressBar(percentage) {
+            const progressBar = document.getElementById('loadingProgressBar');
+            progressBar.style.width = percentage + '%';
+        }
+
+        function updateLoadingDetails(text, filesLoaded = 0, totalFiles = 0) {
+            const details = document.getElementById('loadingDetails');
+            if (totalFiles > 0) {
+                details.textContent = `${text} (${filesLoaded}/${totalFiles} files loaded)`;
+            } else {
+                details.textContent = text;
+            }
+        }
+
+        function showLoadingError(stepIndex, errorMessage) {
+            updateLoadingStep(stepIndex, 'error');
+            document.getElementById('loadingStatus').textContent = 'Loading failed';
+            document.getElementById('loadingDetails').textContent = errorMessage;
+            
+            // Show retry option after a delay
+            setTimeout(() => {
+                const details = document.getElementById('loadingDetails');
+                details.innerHTML = `${errorMessage}<br><button onclick="retryLoading()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Retry Loading</button>`;
+            }, 2000);
+        }
+
+        function retryLoading() {
+            // Reset all steps
+            loadingSteps.forEach((step, index) => {
+                const stepEl = document.getElementById(step.id);
+                stepEl.className = 'loading-step pending';
+                stepEl.querySelector('.loading-step-icon').textContent = index + 1;
+            });
+            
+            updateProgressBar(0);
+            currentStep = 0;
+            
+            // Restart loading
+            loadDashboardData();
+        }
 
         // Tab switching functionality
         function switchTab(tabName) {
@@ -644,24 +967,37 @@
 
         async function loadDashboardData() {
             try {
-                // Try to load real data first, fall back to sample data
+                // Show loading overlay
+                showLoading();
+                updateLoadingDetails('Connecting to data source...');
+                
+                // Step 1: Load scan summary
+                updateLoadingStep(0, 'active');
                 let summaryResponse;
                 let dataPath = './data/';
                 
                 try {
                     summaryResponse = await fetch('./data/scan_summary.json');
                     if (!summaryResponse.ok) throw new Error('Real data not found');
+                    updateLoadingDetails('Found real vulnerability data');
                 } catch (error) {
                     console.log('Real data not available, using sample data');
+                    updateLoadingDetails('Loading sample vulnerability data');
                     summaryResponse = await fetch('./sample_data/scan_summary.json');
                     dataPath = './sample_data/';
                 }
                 
                 const summary = await summaryResponse.json();
+                updateLoadingStep(0, 'completed');
                 
-                // Load individual release data and separate releases from branches
+                // Step 2: Load individual release data
+                updateLoadingStep(1, 'active');
                 const releases = {};
                 const branches = {};
+                const totalVersions = summary.scanned_versions.length;
+                let loadedVersions = 0;
+                
+                updateLoadingDetails('Loading vulnerability data files...', loadedVersions, totalVersions);
                 
                 for (const version of summary.scanned_versions) {
                     try {
@@ -674,10 +1010,25 @@
                         } else {
                             releases[version] = data;
                         }
+                        
+                        loadedVersions++;
+                        updateLoadingDetails('Loading vulnerability data files...', loadedVersions, totalVersions);
+                        
+                        // Update progress incrementally
+                        const fileProgress = 10 + (loadedVersions / totalVersions) * 50; // 10% to 60%
+                        updateProgressBar(fileProgress);
                     } catch (error) {
                         console.warn(`Failed to load data for ${version}:`, error);
+                        loadedVersions++;
+                        updateLoadingDetails('Loading vulnerability data files...', loadedVersions, totalVersions);
                     }
                 }
+                
+                updateLoadingStep(1, 'completed');
+                
+                // Step 3: Process statistics
+                updateLoadingStep(2, 'active');
+                updateLoadingDetails('Calculating vulnerability statistics...');
                 
                 dashboardData = {
                     summary,
@@ -685,11 +1036,27 @@
                     branches
                 };
                 
+                // Small delay to show processing step
+                await new Promise(resolve => setTimeout(resolve, 300));
+                updateLoadingStep(2, 'completed');
+                
+                // Step 4: Render dashboard
+                updateLoadingStep(3, 'active');
+                updateLoadingDetails('Rendering dashboard components...');
+                
                 updateDashboard();
                 updateBranchesDashboard();
                 
+                // Complete loading
+                updateLoadingStep(3, 'completed');
+                updateLoadingDetails('Dashboard loaded successfully!');
+                
+                // Hide loading overlay
+                setTimeout(() => hideLoading(), 500);
+                
             } catch (error) {
                 console.error('Failed to load dashboard data:', error);
+                showLoadingError(currentStep, `Failed to load dashboard data: ${error.message}`);
                 document.getElementById('releasesContainer').innerHTML = 
                     '<div class="error">Failed to load vulnerability data. Please check if the scan data is available.</div>';
             }
@@ -713,11 +1080,19 @@
 
         function updateStats() {
             const stats = calculateStats();
-            document.getElementById('totalCritical').textContent = stats.critical;
-            document.getElementById('totalHigh').textContent = stats.high;
-            document.getElementById('totalMedium').textContent = stats.medium;
-            document.getElementById('totalLow').textContent = stats.low;
-            document.getElementById('totalReleases').textContent = stats.totalReleases;
+            
+            // Replace skeleton loaders with actual numbers
+            const criticalEl = document.getElementById('totalCritical');
+            const highEl = document.getElementById('totalHigh');
+            const mediumEl = document.getElementById('totalMedium');
+            const lowEl = document.getElementById('totalLow');
+            const releasesEl = document.getElementById('totalReleases');
+            
+            criticalEl.innerHTML = stats.critical;
+            highEl.innerHTML = stats.high;
+            mediumEl.innerHTML = stats.medium;
+            lowEl.innerHTML = stats.low;
+            releasesEl.innerHTML = stats.totalReleases;
         }
 
         function calculateStats() {
@@ -738,11 +1113,19 @@
 
         function updateBranchStats() {
             const stats = calculateBranchStats();
-            document.getElementById('branchesTotalCritical').textContent = stats.critical;
-            document.getElementById('branchesTotalHigh').textContent = stats.high;
-            document.getElementById('branchesTotalMedium').textContent = stats.medium;
-            document.getElementById('branchesTotalLow').textContent = stats.low;
-            document.getElementById('totalBranches').textContent = stats.totalBranches;
+            
+            // Replace skeleton loaders with actual numbers
+            const criticalEl = document.getElementById('branchesTotalCritical');
+            const highEl = document.getElementById('branchesTotalHigh');
+            const mediumEl = document.getElementById('branchesTotalMedium');
+            const lowEl = document.getElementById('branchesTotalLow');
+            const branchesEl = document.getElementById('totalBranches');
+            
+            criticalEl.innerHTML = stats.critical;
+            highEl.innerHTML = stats.high;
+            mediumEl.innerHTML = stats.medium;
+            lowEl.innerHTML = stats.low;
+            branchesEl.innerHTML = stats.totalBranches;
         }
 
         function calculateBranchStats() {

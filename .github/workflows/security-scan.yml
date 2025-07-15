@@ -126,14 +126,7 @@ jobs:
           
           # Check if we have recent scan data (less than 8 hours old for scheduled runs)
           if [[ -f "${{ env.OUTPUT_DIR }}/scan_summary.json" ]]; then
-            LAST_SCAN=$(python -c "import json, datetime, sys; \
-try: \
-    f = open('${{ env.OUTPUT_DIR }}/scan_summary.json', 'r'); data = json.load(f); f.close(); \
-    last_updated = datetime.datetime.fromisoformat(data['last_updated'].replace('Z', '+00:00')); \
-    age_hours = (datetime.datetime.now(datetime.timezone.utc) - last_updated).total_seconds() / 3600; \
-    print(f'{age_hours:.1f}') \
-except Exception as e: \
-    print('999')")
+            LAST_SCAN=$(python -c "import json, datetime, sys; exec(\"try:\n  f = open('${{ env.OUTPUT_DIR }}/scan_summary.json', 'r'); data = json.load(f); f.close()\n  last_updated = datetime.datetime.fromisoformat(data['last_updated'].replace('Z', '+00:00'))\n  age_hours = (datetime.datetime.now(datetime.timezone.utc) - last_updated).total_seconds() / 3600\n  print(f'{age_hours:.1f}')\nexcept Exception as e:\n  print('999')\")")
             
             # For scheduled runs, allow 8-hour cache; for manual runs, check force flag
             CACHE_THRESHOLD=8

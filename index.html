@@ -90,6 +90,61 @@
         .medium { color: var(--warning-color); }
         .low { color: var(--info-color); }
 
+        /* Tab Styles */
+        .tab-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .tab-navigation {
+            display: flex;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--dark-gray);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab-button:hover {
+            background-color: #f8f9fa;
+            color: var(--primary-color);
+        }
+
+        .tab-button.active {
+            color: var(--primary-color);
+            background-color: #fff;
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .controls {
             background: white;
             padding: 1.5rem;
@@ -400,30 +455,40 @@
 
     <div class="container">
         <div class="dashboard">
-            <div class="stats-grid" id="statsGrid">
-                <div class="stat-card">
-                    <div class="stat-number critical" id="totalCritical">-</div>
-                    <div class="stat-label">Critical</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number high" id="totalHigh">-</div>
-                    <div class="stat-label">High</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number medium" id="totalMedium">-</div>
-                    <div class="stat-label">Medium</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number low" id="totalLow">-</div>
-                    <div class="stat-label">Low</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="totalReleases">-</div>
-                    <div class="stat-label">Releases Scanned</div>
+            <!-- Tab Navigation -->
+            <div class="tab-container">
+                <div class="tab-navigation">
+                    <button class="tab-button active" data-tab="releases">Stable Releases</button>
+                    <button class="tab-button" data-tab="branches">Release Branches</button>
                 </div>
             </div>
 
-            <div class="controls">
+            <!-- Releases Tab Content -->
+            <div class="tab-content active" id="releases-tab">
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-number critical" id="totalCritical">-</div>
+                        <div class="stat-label">Critical</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number high" id="totalHigh">-</div>
+                        <div class="stat-label">High</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number medium" id="totalMedium">-</div>
+                        <div class="stat-label">Medium</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number low" id="totalLow">-</div>
+                        <div class="stat-label">Low</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalReleases">-</div>
+                        <div class="stat-label">Releases Scanned</div>
+                    </div>
+                </div>
+
+                <div class="controls">
                 <div class="control-group">
                     <label for="severityFilter">Filter by severity:</label>
                     <select id="severityFilter">
@@ -461,8 +526,77 @@
                 </div>
             </div>
 
-            <div class="last-updated" id="lastUpdated">
-                Last updated: Loading...
+                <div class="last-updated" id="lastUpdated">
+                    Last updated: Loading...
+                </div>
+            </div>
+
+            <!-- Release Branches Tab Content -->
+            <div class="tab-content" id="branches-tab">
+                <div class="stats-grid" id="branchesStatsGrid">
+                    <div class="stat-card">
+                        <div class="stat-number critical" id="branchesTotalCritical">-</div>
+                        <div class="stat-label">Critical</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number high" id="branchesTotalHigh">-</div>
+                        <div class="stat-label">High</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number medium" id="branchesTotalMedium">-</div>
+                        <div class="stat-label">Medium</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number low" id="branchesTotalLow">-</div>
+                        <div class="stat-label">Low</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalBranches">-</div>
+                        <div class="stat-label">Branches Scanned</div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="branchSeverityFilter">Filter by severity:</label>
+                        <select id="branchSeverityFilter">
+                            <option value="all">All Severities</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="branchFilter">Filter by branch:</label>
+                        <select id="branchFilter">
+                            <option value="all">All Branches</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <input type="text" id="branchSearchInput" placeholder="Search CVE ID or component...">
+                    </div>
+                    <button class="btn" onclick="exportBranchData()">Export JSON</button>
+                    <button class="btn" onclick="showBranchCVECrossReference()" style="background: var(--info-color);">CVE Cross-Reference</button>
+                </div>
+
+                <div id="branchCveCrossReference" class="cve-cross-reference" style="display: none;">
+                    <h4>CVE Cross-Reference Across ESP-IDF Release Branches</h4>
+                    <div id="branchCveAnalysisContent">Loading analysis...</div>
+                </div>
+
+                <div class="releases-table">
+                    <div class="table-header">
+                        ESP-IDF Release Branch Vulnerability Status
+                    </div>
+                    <div id="branchesContainer">
+                        <div class="loading">Loading vulnerability data...</div>
+                    </div>
+                </div>
+
+                <div class="last-updated" id="branchesLastUpdated">
+                    Last updated: Loading...
+                </div>
             </div>
         </div>
     </div>
@@ -470,6 +604,43 @@
     <script>
         let dashboardData = {};
         let allReleases = [];
+        let currentTab = 'releases';
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            currentTab = tabName;
+            
+            // Refresh data for the new tab
+            if (Object.keys(dashboardData).length > 0) {
+                if (tabName === 'releases') {
+                    updateDashboard();
+                } else {
+                    updateBranchesDashboard();
+                }
+            }
+        }
+
+        // Initialize tab event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    switchTab(tabName);
+                });
+            });
+        });
 
         async function loadDashboardData() {
             try {
@@ -488,13 +659,21 @@
                 
                 const summary = await summaryResponse.json();
                 
-                // Load individual release data
+                // Load individual release data and separate releases from branches
                 const releases = {};
+                const branches = {};
+                
                 for (const version of summary.scanned_versions) {
                     try {
                         const response = await fetch(`${dataPath}${version}.json`);
                         const data = await response.json();
-                        releases[version] = data;
+                        
+                        // Separate releases from release branches
+                        if (version.startsWith('release_') || version.startsWith('release/')) {
+                            branches[version] = data;
+                        } else {
+                            releases[version] = data;
+                        }
                     } catch (error) {
                         console.warn(`Failed to load data for ${version}:`, error);
                     }
@@ -502,10 +681,12 @@
                 
                 dashboardData = {
                     summary,
-                    releases
+                    releases,
+                    branches
                 };
                 
                 updateDashboard();
+                updateBranchesDashboard();
                 
             } catch (error) {
                 console.error('Failed to load dashboard data:', error);
@@ -520,6 +701,14 @@
             updateReleasesDisplay();
             updateLastUpdated();
             analyzeCVEsAcrossReleases();
+        }
+
+        function updateBranchesDashboard() {
+            updateBranchStats();
+            updateBranchFilter();
+            updateBranchesDisplay();
+            updateBranchesLastUpdated();
+            analyzeCVEsAcrossBranches();
         }
 
         function updateStats() {
@@ -547,6 +736,31 @@
             return stats;
         }
 
+        function updateBranchStats() {
+            const stats = calculateBranchStats();
+            document.getElementById('branchesTotalCritical').textContent = stats.critical;
+            document.getElementById('branchesTotalHigh').textContent = stats.high;
+            document.getElementById('branchesTotalMedium').textContent = stats.medium;
+            document.getElementById('branchesTotalLow').textContent = stats.low;
+            document.getElementById('totalBranches').textContent = stats.totalBranches;
+        }
+
+        function calculateBranchStats() {
+            const stats = { critical: 0, high: 0, medium: 0, low: 0, totalBranches: 0 };
+            
+            for (const [version, data] of Object.entries(dashboardData.branches || {})) {
+                stats.totalBranches++;
+                if (data.summary && data.summary.by_severity) {
+                    stats.critical += data.summary.by_severity.CRITICAL || 0;
+                    stats.high += data.summary.by_severity.HIGH || 0;
+                    stats.medium += data.summary.by_severity.MEDIUM || 0;
+                    stats.low += data.summary.by_severity.LOW || 0;
+                }
+            }
+            
+            return stats;
+        }
+
         function updateVersionFilter() {
             const select = document.getElementById('versionFilter');
             const versions = Object.keys(dashboardData.releases).sort((a, b) => {
@@ -560,6 +774,21 @@
                 const option = document.createElement('option');
                 option.value = version;
                 option.textContent = version;
+                select.appendChild(option);
+            });
+        }
+
+        function updateBranchFilter() {
+            const select = document.getElementById('branchFilter');
+            const branches = Object.keys(dashboardData.branches || {}).sort();
+            
+            // Clear existing options except "All Branches"
+            select.innerHTML = '<option value="all">All Branches</option>';
+            
+            branches.forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch;
+                option.textContent = branch;
                 select.appendChild(option);
             });
         }
@@ -689,6 +918,123 @@
                 const lastUpdated = new Date(dashboardData.summary.last_updated).toLocaleString();
                 document.getElementById('lastUpdated').textContent = `Last updated: ${lastUpdated}`;
             }
+        }
+
+        function updateBranchesDisplay() {
+            const container = document.getElementById('branchesContainer');
+            const severityFilter = document.getElementById('branchSeverityFilter').value;
+            const branchFilter = document.getElementById('branchFilter').value;
+            const searchTerm = document.getElementById('branchSearchInput').value.toLowerCase();
+            
+            if (!dashboardData.branches) {
+                container.innerHTML = '<div class="loading">No branch data available.</div>';
+                return;
+            }
+            
+            let branches = Object.entries(dashboardData.branches);
+            
+            // Apply branch filter
+            if (branchFilter !== 'all') {
+                branches = branches.filter(([version, data]) => version === branchFilter);
+            }
+            
+            branches.sort(([a], [b]) => a.localeCompare(b));
+            
+            const branchesHtml = branches.map(([version, data]) => {
+                const vulnerabilities = data.vulnerabilities || [];
+                
+                // Apply severity and search filters
+                const filteredVulnerabilities = vulnerabilities.filter(vuln => {
+                    if (severityFilter !== 'all' && vuln.severity !== severityFilter.toUpperCase()) {
+                        return false;
+                    }
+                    if (searchTerm && !vuln.cve_id.toLowerCase().includes(searchTerm) && 
+                        !vuln.component.toLowerCase().includes(searchTerm)) {
+                        return false;
+                    }
+                    return true;
+                });
+                
+                if (filteredVulnerabilities.length === 0 && (severityFilter !== 'all' || searchTerm)) {
+                    return ''; // Don't show branches with no matching vulnerabilities
+                }
+                
+                return generateReleaseHtml(version, data, filteredVulnerabilities);
+            }).filter(html => html).join('');
+            
+            container.innerHTML = branchesHtml || '<div class="loading">No branches match the current filters.</div>';
+        }
+
+        function updateBranchesLastUpdated() {
+            if (dashboardData.summary && dashboardData.summary.last_updated) {
+                const lastUpdated = new Date(dashboardData.summary.last_updated).toLocaleString();
+                document.getElementById('branchesLastUpdated').textContent = `Last updated: ${lastUpdated}`;
+            }
+        }
+
+        function analyzeCVEsAcrossBranches() {
+            const cveMap = new Map();
+            
+            // Collect all CVEs across all branches
+            for (const [version, data] of Object.entries(dashboardData.branches || {})) {
+                const vulnerabilities = data.vulnerabilities || [];
+                vulnerabilities.forEach(vuln => {
+                    const cveId = vuln.cve_id;
+                    if (!cveMap.has(cveId)) {
+                        cveMap.set(cveId, { 
+                            vulnerability: vuln, 
+                            affectedVersions: [] 
+                        });
+                    }
+                    cveMap.get(cveId).affectedVersions.push(version);
+                });
+            }
+            
+            // Generate cross-reference content similar to releases
+            const content = document.getElementById('branchCveAnalysisContent');
+            const allVersions = Object.keys(dashboardData.branches || {}).sort();
+            
+            if (cveMap.size === 0) {
+                content.innerHTML = '<p>No CVE data available for branch analysis.</p>';
+                return;
+            }
+            
+            let html = `
+                <div class="cve-analysis-summary">
+                    <p><strong>Branch CVE Analysis:</strong></p>
+                    <p>This analysis shows which ESP-IDF release branches contain each CVE.</p>
+                    <p><strong>Total CVEs found:</strong> ${cveMap.size}</p>
+                    <p><strong>Total branches scanned:</strong> ${allVersions.length}</p>
+                </div>
+                <div class="cve-list">
+            `;
+            
+            const sortedCVEs = Array.from(cveMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+            
+            for (const [cveId, data] of sortedCVEs) {
+                const vuln = data.vulnerability;
+                const affectedCount = data.affectedVersions.length;
+                const isInAllBranches = affectedCount === allVersions.length;
+                
+                html += `
+                    <div class="cve-cross-ref-item">
+                        <h5>${cveId} 
+                            <span class="severity-badge ${(vuln.severity || 'unknown').toLowerCase()}">
+                                ${vuln.severity || 'Unknown'}
+                            </span>
+                        </h5>
+                        <p><strong>Component:</strong> ${vuln.component || 'Unknown'} ${vuln.component_version || ''}</p>
+                        <p><strong>Description:</strong> ${vuln.description || 'No description available'}</p>
+                        <p><strong>Affected branches (${affectedCount}/${allVersions.length}):</strong> 
+                            ${data.affectedVersions.join(', ')}
+                            ${isInAllBranches ? '<span style="color: var(--warning-color);"> ⚠️ Present in all scanned branches</span>' : ''}
+                        </p>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            content.innerHTML = html;
         }
 
         function analyzeCVEsAcrossReleases() {
@@ -885,7 +1231,7 @@
         }
 
         function exportData() {
-            const dataStr = JSON.stringify(dashboardData, null, 2);
+            const dataStr = JSON.stringify(dashboardData.releases, null, 2);
             const dataBlob = new Blob([dataStr], {type: 'application/json'});
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
@@ -895,10 +1241,46 @@
             URL.revokeObjectURL(url);
         }
 
-        // Event listeners
+        function exportBranchData() {
+            const dataStr = JSON.stringify(dashboardData.branches, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'esp-idf-branch-vulnerability-data.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showCVECrossReference() {
+            const element = document.getElementById('cveCrossReference');
+            if (element.style.display === 'none') {
+                element.style.display = 'block';
+                analyzeCVEsAcrossReleases();
+            } else {
+                element.style.display = 'none';
+            }
+        }
+
+        function showBranchCVECrossReference() {
+            const element = document.getElementById('branchCveCrossReference');
+            if (element.style.display === 'none') {
+                element.style.display = 'block';
+                analyzeCVEsAcrossBranches();
+            } else {
+                element.style.display = 'none';
+            }
+        }
+
+        // Event listeners for releases tab
         document.getElementById('severityFilter').addEventListener('change', updateReleasesDisplay);
         document.getElementById('versionFilter').addEventListener('change', updateReleasesDisplay);
         document.getElementById('searchInput').addEventListener('input', updateReleasesDisplay);
+
+        // Event listeners for branches tab
+        document.getElementById('branchSeverityFilter').addEventListener('change', updateBranchesDisplay);
+        document.getElementById('branchFilter').addEventListener('change', updateBranchesDisplay);
+        document.getElementById('branchSearchInput').addEventListener('input', updateBranchesDisplay);
 
         // Load data when page loads
         document.addEventListener('DOMContentLoaded', loadDashboardData);

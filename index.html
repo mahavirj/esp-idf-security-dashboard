@@ -327,6 +327,23 @@
             100% { left: 100%; }
         }
 
+        /* Statistics Tab Styles */
+        .stats-section {
+            padding: 1rem 0;
+        }
+
+        .stats-category {
+            margin-bottom: 3rem;
+        }
+
+        .stats-category h4 {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
         .controls {
             background: white;
             padding: 1.5rem;
@@ -672,6 +689,15 @@
                     Vulnerabilities page of the ESP-IDF Programming Guide
                 </a>.
             </p>
+            <p style="margin-top: 0.5rem; opacity: 0.9;">
+                View the source code at 
+                <a href="https://github.com/espressif/esp-idf-security-dashboard" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   style="color: white; text-decoration: underline;">
+                    GitHub Repository
+                </a>.
+            </p>
         </div>
     </div>
 
@@ -682,44 +708,12 @@
                 <div class="tab-navigation">
                     <button class="tab-button active" data-tab="releases">Stable Releases</button>
                     <button class="tab-button" data-tab="branches">Release Branches</button>
+                    <button class="tab-button" data-tab="statistics">Statistics</button>
                 </div>
             </div>
 
             <!-- Releases Tab Content -->
             <div class="tab-content active" id="releases-tab">
-                <div class="stats-grid" id="statsGrid">
-                    <div class="stat-card">
-                        <div class="stat-number critical" id="totalCritical">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">Critical</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number high" id="totalHigh">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">High</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number medium" id="totalMedium">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">Medium</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number low" id="totalLow">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">Low</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalReleases">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">Releases Scanned</div>
-                    </div>
-                </div>
-
                 <div class="controls">
                 <div class="control-group">
                     <label for="severityFilter">Filter by severity:</label>
@@ -765,39 +759,6 @@
 
             <!-- Release Branches Tab Content -->
             <div class="tab-content" id="branches-tab">
-                <div class="stats-grid" id="branchesStatsGrid">
-                    <div class="stat-card">
-                        <div class="stat-number critical" id="branchesTotalCritical">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">Critical</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number high" id="branchesTotalHigh">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">High</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number medium" id="branchesTotalMedium">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">Medium</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number low" id="branchesTotalLow">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">Low</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="totalBranches">
-                            <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
-                        </div>
-                        <div class="stat-label">Branches Scanned</div>
-                    </div>
-                </div>
-
                 <div class="controls">
                     <div class="control-group">
                         <label for="branchSeverityFilter">Filter by severity:</label>
@@ -837,6 +798,131 @@
                 </div>
 
                 <div class="last-updated" id="branchesLastUpdated">
+                    Last updated: Loading...
+                </div>
+            </div>
+
+            <!-- Statistics Tab Content -->
+            <div class="tab-content" id="statistics-tab">
+                <div class="stats-section">
+                    <h3 style="margin-bottom: 1.5rem; color: var(--primary-color);">Vulnerability Statistics</h3>
+                    
+                    <div class="stats-category">
+                        <h4>Stable Releases</h4>
+                        <div class="stats-grid" id="statsGrid">
+                            <div class="stat-card">
+                                <div class="stat-number critical" id="totalCritical">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Critical</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number high" id="totalHigh">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">High</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number medium" id="totalMedium">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Medium</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number low" id="totalLow">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Low</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalReleases">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Releases Scanned</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-category">
+                        <h4>Release Branches</h4>
+                        <div class="stats-grid" id="branchesStatsGrid">
+                            <div class="stat-card">
+                                <div class="stat-number critical" id="branchesTotalCritical">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Critical</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number high" id="branchesTotalHigh">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">High</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number medium" id="branchesTotalMedium">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Medium</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number low" id="branchesTotalLow">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Low</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalBranches">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Branches Scanned</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-category">
+                        <h4>Overall Summary</h4>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalCombinedCritical">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Total Critical</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalCombinedHigh">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Total High</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalCombinedMedium">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Total Medium</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalCombinedLow">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Total Low</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalCombinedVulns">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Total Vulnerabilities</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalCombinedScanned">
+                                    <div class="skeleton-number"><div class="skeleton-shimmer"></div></div>
+                                </div>
+                                <div class="stat-label">Total Scanned</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="last-updated" id="statsLastUpdated">
                     Last updated: Loading...
                 </div>
             </div>
@@ -958,8 +1044,10 @@
             if (Object.keys(dashboardData).length > 0) {
                 if (tabName === 'releases') {
                     updateDashboard();
-                } else {
+                } else if (tabName === 'branches') {
                     updateBranchesDashboard();
+                } else if (tabName === 'statistics') {
+                    updateStatisticsDashboard();
                 }
             }
         }
@@ -1057,6 +1145,7 @@
                 
                 updateDashboard();
                 updateBranchesDashboard();
+                updateStatisticsDashboard();
                 
                 // Complete loading
                 updateLoadingStep(3, 'completed');
@@ -1087,6 +1176,13 @@
             updateBranchesDisplay();
             updateBranchesLastUpdated();
             analyzeCVEsAcrossBranches();
+        }
+
+        function updateStatisticsDashboard() {
+            updateStats();
+            updateBranchStats();
+            updateCombinedStats();
+            updateStatsLastUpdated();
         }
 
         function updateStats() {
@@ -1153,6 +1249,34 @@
             }
             
             return stats;
+        }
+
+        function updateCombinedStats() {
+            const releaseStats = calculateStats();
+            const branchStats = calculateBranchStats();
+            
+            // Calculate combined totals
+            const combinedCritical = releaseStats.critical + branchStats.critical;
+            const combinedHigh = releaseStats.high + branchStats.high;
+            const combinedMedium = releaseStats.medium + branchStats.medium;
+            const combinedLow = releaseStats.low + branchStats.low;
+            const combinedVulns = combinedCritical + combinedHigh + combinedMedium + combinedLow;
+            const combinedScanned = releaseStats.totalReleases + branchStats.totalBranches;
+            
+            // Update combined statistics elements
+            document.getElementById('totalCombinedCritical').innerHTML = combinedCritical;
+            document.getElementById('totalCombinedHigh').innerHTML = combinedHigh;
+            document.getElementById('totalCombinedMedium').innerHTML = combinedMedium;
+            document.getElementById('totalCombinedLow').innerHTML = combinedLow;
+            document.getElementById('totalCombinedVulns').innerHTML = combinedVulns;
+            document.getElementById('totalCombinedScanned').innerHTML = combinedScanned;
+        }
+
+        function updateStatsLastUpdated() {
+            if (dashboardData.summary && dashboardData.summary.last_updated) {
+                const lastUpdated = new Date(dashboardData.summary.last_updated).toLocaleString();
+                document.getElementById('statsLastUpdated').textContent = `Last updated: ${lastUpdated}`;
+            }
         }
 
         function updateVersionFilter() {

@@ -1001,7 +1001,9 @@
                 
                 for (const version of summary.scanned_versions) {
                     try {
-                        const response = await fetch(`${dataPath}${version}.json`);
+                        // Convert file path: replace 'release/' with 'release_' for file names
+                        const fileName = version.replace('release/', 'release_');
+                        const response = await fetch(`${dataPath}${fileName}.json`);
                         const data = await response.json();
                         
                         // Separate releases from release branches
